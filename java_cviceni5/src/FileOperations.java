@@ -1,27 +1,27 @@
+import javax.swing.*;
 import java.io.*;
 
 
 public class FileOperations {
-    static boolean isExistingReadableFile(File f){
+    static boolean isExistingReadableFile(File f) {
         return f.exists() && f.isFile() && f.canRead();
     }
 
     public FileOperations() {
     }
 
-    static public boolean saveCitizensToFile(File inputFile, File outputFile){
-        if(isExistingReadableFile(inputFile)){
-            try(
-                //Textovy vstup z csv
-                BufferedReader br = new BufferedReader(new FileReader(inputFile));
-                //Binarni vystup (serializace)
-                ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(outputFile));
-            )
-            {
+    static public boolean saveCitizensToFile(File inputFile, File outputFile) {
+        if (isExistingReadableFile(inputFile)) {
+            try (
+                    //Textovy vstup z csv
+                    BufferedReader br = new BufferedReader(new FileReader(inputFile));
+                    //Binarni vystup (serializace)
+                    ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(outputFile));
+            ) {
                 String line;
-                while ((line = br.readLine()) != null){
+                while ((line = br.readLine()) != null) {
                     String[] parts = line.split(";");
-                    if(parts.length == 5){
+                    if (parts.length == 5) {
                         parts[0] = parts[0].trim();
                         parts[1] = parts[1].trim();
                         parts[2] = parts[2].trim();
@@ -33,8 +33,7 @@ public class FileOperations {
                     }
                 }
                 return true;
-            }
-            catch (IOException | NumberFormatException e){
+            } catch (IOException | NumberFormatException e) {
                 System.err.println(e.getMessage());
                 return false;
             }
@@ -43,13 +42,13 @@ public class FileOperations {
         return false;
     }
 
-    static public void printCitizensFromFile(File binaryFile){
-        if(isExistingReadableFile(binaryFile)){
+    static public void printCitizensFromFile(File binaryFile) {
+        if (isExistingReadableFile(binaryFile)) {
             try (ObjectInputStream input = new ObjectInputStream(new FileInputStream(binaryFile))) {
-            while(true){
-                Citizien c = (Citizien) input.readObject();
-                System.out.println(c.toString());
-            }
+                while (true) {
+                    Citizien c = (Citizien) input.readObject();
+                    System.out.println(c.toString());
+                }
 
             } catch (EOFException e) {
                 System.out.println("--- Konec souboru ---");
@@ -60,4 +59,54 @@ public class FileOperations {
         }
         return;
     }
+
+    static long getTotalSizeOfFilesByExtension(File dir, String ext) {
+        if (!dir.isDirectory()) throw new IllegalArgumentException("Parametr dir neni adresar");
+        if (!dir.exists()) throw new IllegalArgumentException("Adresar neexistuje");
+        if (!dir.canRead()) throw new IllegalArgumentException("Adresar neni citelny");
+        if (dir == null) throw new IllegalArgumentException("Adresar neni adresar");
+        if (ext == null) throw new IllegalArgumentException("Pripona je ko");
+        long dirSize = 0;
+        if (dir.listFiles() != null) {
+            for (File file : dir.listFiles()) {
+                if (file.getName().endsWith("." + ext)) {
+                    dirSize += file.length();
+                } else if (file.isDirectory()) {
+                    // Pozor: Zde voláme tu samou metodu pro podadresář.
+                    // Tím se znovu spustí i validace pro tento podadresář
+                    // a následně se prohledá jeho obsah.
+                    try {
+                        dirSize += getTotalSizeOfFilesByExtension(file, ext);
+                    } catch (IllegalArgumentException e) {
+                        // Volitelné: Pokud podadresář nelze číst, rekurzivní volání vyhodí výjimku.
+                        // Zde ji můžeme ignorovat a pokračovat dál, nebo nechat probublat nahoru.
+                        // Dle zadání "vyhodí výjimku" nechávám bez try-catch (nebo ji znovu vyhodím),
+                        // ale v praxi se často nečitelné složky jen přeskočí.
+                        throw e;
+                    }
+                }
+            }
+        }
+        return dirSize;
+    }
+    public static File chooseDirectory() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+        chooser.setDialogTitle("Vyberte složku");
+        File selectedDir = null;
+        while (selectedDir == null) {
+            int result = chooser.showOpenDialog(null);
+            if (result == JFileChooser.APPROVE_OPTION) {
+                selectedDir = chooser.getSelectedFile();
+            } else {
+                JOptionPane.showMessageDialog(null,
+                        "Musíte vybrat složku, jinak nelze pokračovat.",
+                        "Výběr složky",
+                        JOptionPane.WARNING_MESSAGE);
+            }
+        }
+        return selectedDir;
+    }
+
 }
+
